@@ -1,0 +1,12 @@
+port: "8000"
+db:
+  host: "postgres"
+  port: "5432"
+  user: "postgres"
+  password: "lavate"
+  dbname: "postgres"
+  sslmode: "disable"
+admin:
+  name: "Александр"
+  email: "aleksgraznov0@gmail.com"
+  password: "mainadmin"

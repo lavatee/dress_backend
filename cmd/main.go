@@ -1,0 +1,96 @@
+package main
+
+import (
+	"context"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
+	"path/filepath"
+	"runtime"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	backend "github.com/lavatee/dresscode_backend"
+	"github.com/lavatee/dresscode_backend/internal/endpoint"
+	"github.com/lavatee/dresscode_backend/internal/repository"
+	"github.com/lavatee/dresscode_backend/internal/service"
+	"github.com/lib/pq"
+	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+)
+
+func main() {
+	logrus.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
+	if err := InitConfig(); err != nil {
+		logrus.Fatalf("error initializing configs: %s", err.Error())
+	}
+
+	logrus.Infof("Database configuration: host=%s, port=%s, user=%s, dbname=%s, sslmode=%s",
+		viper.GetString("db.host"),
+		viper.GetString("db.port"),
+		viper.GetString("db.user"),
+		viper.GetString("db.dbname"),
+		viper.GetString("db.sslmode"))
+
+	db, err := repository.NewPostgresDB(repository.PostgresConfig{
+		Host:     viper.GetString("db.host"),
+		Port:     viper.GetString("db.port"),
+		Username: viper.GetString("db.user"),
+		Password: viper.GetString("db.password"),
+		DBName:   viper.GetString("db.dbname"),
+		SSLMode:  viper.GetString("db.sslmode"),
+	})
+	if err != nil {
+		logrus.Fatalf("error initializing db: %s", err.Error())
+	}
+	defer db.Close()
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		logrus.Fatalf("Failed to create migrate driver: %s", err.Error())
+	}
+
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	migrationsPath := "file://" + filepath.Join(dir, "../schema")
+	migrations, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
+	if err != nil {
+		logrus.Fatalf("Failed to create migrate instance: %s", err.Error())
+	}
+	if err = migrations.Up(); err != nil && err != migrate.ErrNoChange {
+		logrus.Fatalf("Migrations error: %s", err.Error())
+	}
+	repo := repository.NewRepository(db)
+	services := service.NewService(repo)
+	if err := services.CreateAdmin(viper.GetString("admin.name"), viper.GetString("admin.email"), viper.GetString("admin.password")); err != nil {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" && strings.Contains(pgErr.Message, "users_email_key") {
+			logrus.Info("Admin already exists")
+		} else {
+			logrus.Fatalf("error creating admin: %s", err.Error())
+		}
+	}
+	endp := endpoint.NewEndpoint(services)
+	server := &backend.Server{}
+	go func() {
+		if err := server.Run(viper.GetString("port"), endp.InitRoutes()); err != nil {
+			logrus.Fatalf("error running http server: %s", err.Error())
+		}
+	}()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+	logrus.Print("Shutting down server...")
+	if err := server.Shutdown(context.Background()); err != nil {
+		logrus.Errorf("error shutting down server: %s", err.Error())
+	}
+
+}
+
+func InitConfig() error {
+	viper.AddConfigPath("configs")
+	viper.SetConfigName("config")
+	return viper.ReadInConfig()
+}
