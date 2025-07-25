@@ -33,8 +33,8 @@ func (r *ProductsPostgres) CreateProduct(product model.Product) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	query := fmt.Sprintf("INSERT INTO %s (name, description, price, category_id, collection, color) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", productsTable)
-	row := tx.QueryRow(query, product.Name, product.Description, product.Price, product.CategoryID, product.Collection, product.Color)
+	query := fmt.Sprintf("INSERT INTO %s (name, description, price, collection_id, category, color) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", productsTable)
+	row := tx.QueryRow(query, product.Name, product.Description, product.Price, product.CollectionID, product.Category, product.Color)
 
 	if err := row.Scan(&productId); err != nil {
 		tx.Rollback()
@@ -52,7 +52,7 @@ func (r *ProductsPostgres) CreateProduct(product model.Product) (int, error) {
 }
 
 func (r *ProductsPostgres) GetProduct(productId int, userId int) (model.Product, error) {
-	query := fmt.Sprintf("SELECT p.*, c.name as category_name, EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $2) as is_liked FROM %s p JOIN %s c ON p.category_id = c.id WHERE p.id = $1", likedProductsTable, productsTable, categoriesTable)
+	query := fmt.Sprintf("SELECT p.*, c.name as collection_name, EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $2) as is_liked FROM %s p JOIN %s c ON p.collection_id = c.id WHERE p.id = $1", likedProductsTable, productsTable, collectionsTable)
 	var product model.Product
 	if err := r.db.Get(&product, query, productId, userId); err != nil {
 		return model.Product{}, err
@@ -60,35 +60,42 @@ func (r *ProductsPostgres) GetProduct(productId int, userId int) (model.Product,
 	return product, nil
 }
 
-func (r *ProductsPostgres) GetProducts(categoryId int, collection string, color string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error) {
+func (r *ProductsPostgres) GetProducts(collectionId int, category string, colors []string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error) {
 	query := fmt.Sprintf(`
 		SELECT DISTINCT 
 			p.*,
-			c.name as category_name,
+			c.name as collection_name,
 			EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $1) as is_liked 
 		FROM %s p
-		LEFT JOIN %s c ON p.category_id = c.id`,
-		likedProductsTable, productsTable, categoriesTable)
+		LEFT JOIN %s c ON p.collection_id = c.id`,
+		likedProductsTable, productsTable, collectionsTable)
 
 	args := []interface{}{userId}
 	where := ""
 	argIdx := 2
 
-	if collection != "" {
-		where += fmt.Sprintf("p.collection = $%d AND ", argIdx)
-		args = append(args, collection)
+	if category != "" {
+		where += fmt.Sprintf("p.category = $%d AND ", argIdx)
+		args = append(args, category)
 		argIdx++
 	}
 
-	if color != "" {
-		where += fmt.Sprintf("p.color = $%d AND ", argIdx)
-		args = append(args, color)
-		argIdx++
+	if len(colors) > 0 {
+		where += fmt.Sprintf("(", argIdx)
+		for i, color := range colors {
+			where += "p.color = $%d"
+			if i < len(colors)-1 && i > 0 {
+				where += " OR "
+			}
+			args = append(args, color)
+			argIdx++
+		}
+		where += ") AND "
 	}
 
-	if categoryId != 0 {
-		where += fmt.Sprintf("p.category_id = $%d AND ", argIdx)
-		args = append(args, categoryId)
+	if collectionId != 0 {
+		where += fmt.Sprintf("p.collection_id = $%d AND ", argIdx)
+		args = append(args, collectionId)
 		argIdx++
 	}
 
@@ -214,7 +221,7 @@ func (r *ProductsPostgres) RemoveProductFromLiked(userId int, productId int) err
 }
 
 func (r *ProductsPostgres) GetLikedProducts(userId int) ([]model.Product, error) {
-	query := fmt.Sprintf("SELECT p.*, c.name as category_name, EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $1) as is_liked FROM %s lp JOIN %s p ON lp.product_id = p.id JOIN %s c ON p.category_id = c.id WHERE lp.user_id = $1", likedProductsTable, likedProductsTable, productsTable, categoriesTable)
+	query := fmt.Sprintf("SELECT p.*, c.name as collection_name, EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $1) as is_liked FROM %s lp JOIN %s p ON lp.product_id = p.id JOIN %s c ON p.collection_id = c.id WHERE lp.user_id = $1", likedProductsTable, likedProductsTable, productsTable, collectionsTable)
 	var products []model.Product
 	if err := r.db.Select(&products, query, userId); err != nil {
 		return nil, err
@@ -314,23 +321,23 @@ func (r *ProductsPostgres) GetProductSizes(productId int) ([]model.Size, error) 
 	return sizes, nil
 }
 
-func (r *ProductsPostgres) CreateCategory(category model.Category) (int, error) {
-	query := fmt.Sprintf("INSERT INTO %s (name) VALUES ($1) RETURNING id", categoriesTable)
-	row := r.db.QueryRow(query, category.Name)
-	var categoryId int
-	if err := row.Scan(&categoryId); err != nil {
+func (r *ProductsPostgres) CreateCollection(collection model.Collection) (int, error) {
+	query := fmt.Sprintf("INSERT INTO %s (name) VALUES ($1) RETURNING id", collectionsTable)
+	row := r.db.QueryRow(query, collection.Name)
+	var collectionId int
+	if err := row.Scan(&collectionId); err != nil {
 		return 0, err
 	}
-	return categoryId, nil
+	return collectionId, nil
 }
 
-func (r *ProductsPostgres) GetCategories() ([]model.Category, error) {
-	query := fmt.Sprintf("SELECT * FROM %s", categoriesTable)
-	var categories []model.Category
-	if err := r.db.Select(&categories, query); err != nil {
+func (r *ProductsPostgres) GetCollections() ([]model.Collection, error) {
+	query := fmt.Sprintf("SELECT * FROM %s", collectionsTable)
+	var collections []model.Collection
+	if err := r.db.Select(&collections, query); err != nil {
 		return nil, err
 	}
-	return categories, nil
+	return collections, nil
 }
 
 func (r *ProductsPostgres) SearchProducts(userId int, userQuery string) ([]model.Product, error) {
@@ -338,11 +345,11 @@ func (r *ProductsPostgres) SearchProducts(userId int, userQuery string) ([]model
 	query := fmt.Sprintf(`
 	SELECT DISTINCT 
 		p.*,
-		c.name as category_name,
+		c.name as collection_name,
 		EXISTS(SELECT 1 FROM %s lp WHERE lp.product_id = p.id AND lp.user_id = $1) as is_liked 
 	FROM %s p
-	LEFT JOIN %s c ON p.category_id = c.id WHERE p.name ILIKE $2`,
-		likedProductsTable, productsTable, categoriesTable)
+	LEFT JOIN %s c ON p.collection_id = c.id WHERE p.name ILIKE $2`,
+		likedProductsTable, productsTable, collectionsTable)
 	var products []model.Product
 	if err := r.db.Select(&products, query, userId, "%"+userQuery+"%"); err != nil {
 		return nil, err

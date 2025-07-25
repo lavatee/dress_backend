@@ -1,0 +1,1 @@
+INSERT INTO collections (name) VALUES ('Без коллекции');

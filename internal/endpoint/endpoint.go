@@ -64,8 +64,14 @@ func (e *Endpoint) InitRoutes() *gin.Engine {
 		products.GET("/liked", e.GetLikedProducts)
 		products.PUT("/:id/sizes/amount", e.ChangeProductSizesAmount)
 		products.GET("/search", e.SearchProducts)
-		products.GET("/categories", e.GetCategories)
-		products.POST("/categories", e.CreateCategory)
+		products.GET("/collections", e.GetCollections)
+		products.POST("/collections", e.CreateCollection)
+	}
+	productsMedia := api.Group("/products-media")
+	{
+		productsMedia.POST("/", e.UploadOneProductMedia)
+		productsMedia.GET("/:product_id", e.GetProductMedia)
+		productsMedia.DELETE("/:media_id", e.DeleteOneProductMedia)
 	}
 	reviews := api.Group("/reviews")
 	{

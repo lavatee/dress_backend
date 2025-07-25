@@ -64,7 +64,11 @@ func main() {
 		logrus.Fatalf("Migrations error: %s", err.Error())
 	}
 	repo := repository.NewRepository(db)
-	services := service.NewService(repo)
+	s3, err := service.ConnectS3(viper.GetString("s3.url"), viper.GetString("s3.accessKey"), viper.GetString("s3.secretKey"), viper.GetString("s3.region"))
+	if err != nil {
+		logrus.Fatalf("error connecting to s3: %s", err.Error())
+	}
+	services := service.NewService(repo, s3, viper.GetString("s3.bucket"))
 	if err := services.CreateAdmin(viper.GetString("admin.name"), viper.GetString("admin.email"), viper.GetString("admin.password")); err != nil {
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" && strings.Contains(pgErr.Message, "users_email_key") {
 			logrus.Info("Admin already exists")

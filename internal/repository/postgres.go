@@ -15,7 +15,7 @@ const (
 	likedProductsTable   = "liked_products"
 	productsInCartTable  = "products_in_cart"
 	sizesTable           = "sizes"
-	categoriesTable      = "categories"
+	collectionsTable     = "collections"
 )
 
 type PostgresConfig struct {

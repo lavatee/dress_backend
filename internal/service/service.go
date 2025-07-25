@@ -1,9 +1,13 @@
 package service
 
 import (
+	"context"
+	"mime/multipart"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/lavatee/dresscode_backend/internal/model"
 	"github.com/lavatee/dresscode_backend/internal/repository"
+	"github.com/minio/minio-go/v7"
 )
 
 type Auth interface {
@@ -22,12 +26,12 @@ type Auth interface {
 type Products interface {
 	CreateProduct(userId int, product model.Product) (int, error)
 	GetProduct(productId int, userId int) (model.Product, error)
-	GetProducts(categoryId int, collection string, color string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error)
+	GetProducts(collectionId int, category string, colors []string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error)
 	DeleteProduct(userId int, productId int) error
 	UpdateProductSizes(userId int, productId int, removedSizes []int, addedSizes []model.Size) error
 	GetProductSizes(productId int) ([]model.Size, error)
-	CreateCategory(userId int, category model.Category) (int, error)
-	GetCategories() ([]model.Category, error)
+	CreateCollection(userId int, collection model.Collection) (int, error)
+	GetCollections() ([]model.Collection, error)
 	AddProductToCart(userId int, productId int, size string, amount int) error
 	RemoveProductFromCart(userId int, productId int) error
 	GetProductsInCart(userId int) ([]model.ProductInCart, error)
@@ -42,6 +46,9 @@ type Orders interface {
 }
 
 type ProductsMedia interface {
+	UploadOneProductMedia(ctx context.Context, userId int, productID int, media model.ProductMedia, fileName string, isProductMain bool, file multipart.File) (int, string, error)
+	DeleteOneProductMedia(userId int, mediaId int) error
+	GetProductMedia(productID int) ([]model.ProductMedia, error)
 }
 
 type Reviews interface {
@@ -60,12 +67,12 @@ type Service struct {
 	Reviews
 }
 
-func NewService(repo *repository.Repository) *Service {
+func NewService(repo *repository.Repository, s3 *minio.Client, bucket string) *Service {
 	return &Service{
 		Auth:          NewAuthService(repo),
 		Products:      NewProductsService(repo),
 		Orders:        NewOrdersService(repo),
-		ProductsMedia: NewProductsMediaService(repo),
+		ProductsMedia: NewProductsMediaService(repo, s3, bucket),
 		Reviews:       NewReviewsService(repo),
 	}
 }

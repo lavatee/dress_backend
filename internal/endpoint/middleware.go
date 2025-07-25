@@ -2,7 +2,6 @@ package endpoint
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -12,16 +11,12 @@ func (e *Endpoint) Middleware(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	sliceOfHeaders := strings.Split(header, " ")
 	if len(sliceOfHeaders) != 2 || sliceOfHeaders[0] != "Bearer" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{
-			"message": "middleware: invalid header",
-		})
+		c.Set("user_id", float64(0))
 		return
 	}
 	claims, err := e.services.Auth.ParseToken(sliceOfHeaders[1])
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{
-			"message": "middleware: " + err.Error(),
-		})
+		c.Set("user_id", float64(0))
 		return
 	}
 	c.Set("user_id", claims["id"])

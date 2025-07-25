@@ -22,26 +22,27 @@ func NewProductsMediaPostgres(db *sqlx.DB) *ProductsMediaPostgres {
 	}
 }
 
-func (r *ProductsMediaPostgres) CreateOneProductMedia(media model.ProductMedia, isProductMain bool) error {
+func (r *ProductsMediaPostgres) CreateOneProductMedia(media model.ProductMedia, isProductMain bool) (int, error) {
 	tx, err := r.db.Begin()
-	query := fmt.Sprintf("INSERT INTO %s (type, url, product_id) VALUES ($1, $2, $3)", productsMediaTable)
-	_, err = tx.Exec(query, media.Type, media.URL, media.ProductID)
-	if err != nil {
+	var id int
+	query := fmt.Sprintf("INSERT INTO %s (type, url, product_id) VALUES ($1, $2, $3) RETURNING id", productsMediaTable)
+	row := tx.QueryRow(query, media.Type, media.URL, media.ProductID)
+	if err := row.Scan(&id); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 	if isProductMain && media.Type == PhotoType {
 		query = fmt.Sprintf("UPDATE %s SET main_photo_url = $1 WHERE id = $2", productsTable)
 		_, err = tx.Exec(query, media.URL, media.ProductID)
 		if err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return id, nil
 }
 
 func (r *ProductsMediaPostgres) DeleteOneProductMedia(mediaId int) error {

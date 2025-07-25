@@ -3,19 +3,19 @@ package model
 import "time"
 
 type Product struct {
-	ID           int            `json:"id" db:"id"`
-	Name         string         `json:"name" db:"name"`
-	Description  string         `json:"description" db:"description"`
-	Price        int            `json:"price" db:"price"`
-	CategoryID   int            `json:"category_id" db:"category_id"`
-	Collection   string         `json:"collection" db:"collection"`
-	Color        string         `json:"color" db:"color"`
-	MainPhotoURL *string        `json:"main_photo_url" db:"main_photo_url"`
-	CategoryName string         `json:"category_name" db:"category_name"`
-	IsLiked      bool           `json:"is_liked" db:"is_liked"`
-	Media        []ProductMedia `json:"media"`
-	Sizes        []Size         `json:"sizes"`
-	Rating       *float64       `json:"rating"`
+	ID             int            `json:"id" db:"id"`
+	Name           string         `json:"name" db:"name"`
+	Description    string         `json:"description" db:"description"`
+	Price          int            `json:"price" db:"price"`
+	CollectionID   int            `json:"collection_id" db:"collection_id"`
+	Category       string         `json:"category" db:"category"`
+	Color          string         `json:"color" db:"color"`
+	MainPhotoURL   *string        `json:"main_photo_url" db:"main_photo_url"`
+	CollectionName string         `json:"collection_name" db:"collection_name"`
+	IsLiked        bool           `json:"is_liked" db:"is_liked"`
+	Media          []ProductMedia `json:"media"`
+	Sizes          []Size         `json:"sizes"`
+	Rating         *float64       `json:"rating"`
 }
 
 type ProductMedia struct {
@@ -62,4 +62,9 @@ type Review struct {
 	Comment   string    `json:"comment" db:"comment"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UserName  string    `json:"user_name" db:"user_name"`
+}
+
+type Collection struct {
+	ID   int    `json:"id" db:"id"`
+	Name string `json:"name" db:"name"`
 }

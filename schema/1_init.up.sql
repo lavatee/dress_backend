@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'buyer', 'admin'))
 );
 
-CREATE TABLE IF NOT EXISTS categories (
+CREATE TABLE IF NOT EXISTS collections (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE
 );
@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     main_photo_url VARCHAR(255),
-    category_id INT NOT NULL,
-    collection VARCHAR(255),
+    collection_id INT,
+    category VARCHAR(255) NOT NULL,
     color VARCHAR(50),
     price INT,
     description VARCHAR(1023)
@@ -96,7 +96,7 @@ ALTER TABLE media ADD FOREIGN KEY (product_id) REFERENCES products(id);
 ALTER TABLE sizes ADD FOREIGN KEY (product_id) REFERENCES products(id);
 ALTER TABLE liked_products ADD FOREIGN KEY (product_id) REFERENCES products(id);
 ALTER TABLE products_in_cart ADD FOREIGN KEY (product_id) REFERENCES products(id);
-ALTER TABLE products ADD FOREIGN KEY (category_id) REFERENCES categories(id);
+ALTER TABLE products ADD FOREIGN KEY (collection_id) REFERENCES collections(id);
 ALTER TABLE liked_products ADD FOREIGN KEY (user_id) REFERENCES users(id);
 ALTER TABLE products_in_cart ADD FOREIGN KEY (user_id) REFERENCES users(id);
 ALTER TABLE orders ADD FOREIGN KEY (user_id) REFERENCES users(id);

@@ -10,13 +10,13 @@ import (
 )
 
 type CreateProductInput struct {
-	Name        string       `json:"name" binding:"required"`
-	Description string       `json:"description"`
-	Price       int          `json:"price" binding:"required"`
-	CategoryID  int          `json:"category_id" binding:"required"`
-	Collection  string       `json:"collection"`
-	Color       string       `json:"color" binding:"required"`
-	Sizes       []model.Size `json:"sizes"`
+	Name         string       `json:"name" binding:"required"`
+	Description  string       `json:"description"`
+	Price        int          `json:"price" binding:"required"`
+	CollectionID int          `json:"collection_id"`
+	Category     string       `json:"category" binding:"required"`
+	Color        string       `json:"color" binding:"required"`
+	Sizes        []model.Size `json:"sizes"`
 }
 
 func (e *Endpoint) PostProduct(c *gin.Context) {
@@ -31,13 +31,13 @@ func (e *Endpoint) PostProduct(c *gin.Context) {
 		return
 	}
 	productId, err := e.services.Products.CreateProduct(userId, model.Product{
-		Name:        input.Name,
-		Description: input.Description,
-		Price:       input.Price,
-		CategoryID:  input.CategoryID,
-		Collection:  input.Collection,
-		Color:       input.Color,
-		Sizes:       input.Sizes,
+		Name:         input.Name,
+		Description:  input.Description,
+		Price:        input.Price,
+		CollectionID: input.CollectionID,
+		Category:     input.Category,
+		Color:        input.Color,
+		Sizes:        input.Sizes,
 	})
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
@@ -68,12 +68,16 @@ func (e *Endpoint) GetProduct(c *gin.Context) {
 }
 
 func (e *Endpoint) GetProducts(c *gin.Context) {
-	categoryId, err := strconv.Atoi(c.Query("category_id"))
+	collectionId, err := strconv.Atoi(c.Query("collection_id"))
 	if err != nil {
-		categoryId = 0
+		collectionId = 0
 	}
-	collection := c.Query("collection")
-	color := c.Query("color")
+	category := c.Query("category")
+	colorsString := c.Query("colors")
+	colors := []string{}
+	if colorsString != "" {
+		colors = strings.Split(colorsString, ",")
+	}
 	sizesString := c.Query("sizes")
 	sizes := []string{}
 	if sizesString != "" {
@@ -96,7 +100,7 @@ func (e *Endpoint) GetProducts(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, ErrorResponse{Message: err.Error()})
 		return
 	}
-	products, err := e.services.Products.GetProducts(categoryId, collection, color, sizes, minPrice, maxPrice, page, userId)
+	products, err := e.services.Products.GetProducts(collectionId, category, colors, sizes, minPrice, maxPrice, page, userId)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 		return
@@ -173,8 +177,8 @@ func (e *Endpoint) GetProductSizes(c *gin.Context) {
 	})
 }
 
-func (e *Endpoint) CreateCategory(c *gin.Context) {
-	var input model.Category
+func (e *Endpoint) CreateCollection(c *gin.Context) {
+	var input model.Collection
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
 		return
@@ -184,24 +188,24 @@ func (e *Endpoint) CreateCategory(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, ErrorResponse{Message: err.Error()})
 		return
 	}
-	categoryId, err := e.services.Products.CreateCategory(userId, input)
+	collectionId, err := e.services.Products.CreateCollection(userId, input)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"category_id": categoryId,
+		"collection_id": collectionId,
 	})
 }
 
-func (e *Endpoint) GetCategories(c *gin.Context) {
-	categories, err := e.services.Products.GetCategories()
+func (e *Endpoint) GetCollections(c *gin.Context) {
+	collections, err := e.services.Products.GetCollections()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"categories": categories,
+		"collections": collections,
 	})
 }
 

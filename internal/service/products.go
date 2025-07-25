@@ -52,8 +52,8 @@ func (s *ProductsService) GetProduct(productId int, userId int) (model.Product, 
 	return product, nil
 }
 
-func (s *ProductsService) GetProducts(categoryId int, collection string, color string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error) {
-	return s.repo.Products.GetProducts(categoryId, collection, color, sizes, minPrice, maxPrice, page, userId)
+func (s *ProductsService) GetProducts(collectionId int, category string, colors []string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error) {
+	return s.repo.Products.GetProducts(collectionId, category, colors, sizes, minPrice, maxPrice, page, userId)
 }
 
 func (s *ProductsService) DeleteProduct(userId int, productId int) error {
@@ -105,15 +105,15 @@ func (s *ProductsService) GetProductSizes(productId int) ([]model.Size, error) {
 	return s.repo.Products.GetProductSizes(productId)
 }
 
-func (s *ProductsService) CreateCategory(userId int, category model.Category) (int, error) {
+func (s *ProductsService) CreateCollection(userId int, collection model.Collection) (int, error) {
 	if !s.repo.Auth.IsAdmin(userId) {
 		return 0, ErrUserNotAdmin
 	}
-	return s.repo.Products.CreateCategory(category)
+	return s.repo.Products.CreateCollection(collection)
 }
 
-func (s *ProductsService) GetCategories() ([]model.Category, error) {
-	return s.repo.Products.GetCategories()
+func (s *ProductsService) GetCollections() ([]model.Collection, error) {
+	return s.repo.Products.GetCollections()
 }
 
 func (s *ProductsService) SearchProducts(userId int, userQuery string) ([]model.Product, error) {

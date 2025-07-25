@@ -22,13 +22,13 @@ type Auth interface {
 type Products interface {
 	CreateProduct(product model.Product) (int, error)
 	GetProduct(productId int, userId int) (model.Product, error)
-	GetProducts(categoryId int, collection string, color string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error)
+	GetProducts(collectionId int, category string, colors []string, sizes []string, minPrice int, maxPrice int, page int, userId int) ([]model.Product, error)
 	DeleteProduct(productId int) error
 	AddProductSizes(tx *sql.Tx, productId int, sizes []model.Size) error
 	UpdateProductSizes(productId int, removedSizes []int, addedSizes []model.Size) error
 	GetProductSizes(productId int) ([]model.Size, error)
-	CreateCategory(category model.Category) (int, error)
-	GetCategories() ([]model.Category, error)
+	CreateCollection(collection model.Collection) (int, error)
+	GetCollections() ([]model.Collection, error)
 	AddProductToCart(userId int, productId int, size string, amount int) error
 	RemoveProductFromCart(userId int, productId int) error
 	GetProductsInCart(userId int) ([]model.ProductInCart, error)
@@ -49,7 +49,7 @@ type Orders interface {
 }
 
 type ProductsMedia interface {
-	CreateOneProductMedia(media model.ProductMedia, isProductMain bool) error
+	CreateOneProductMedia(media model.ProductMedia, isProductMain bool) (int, error)
 	DeleteOneProductMedia(mediaId int) error
 	AddProductMedia(productId int, media []model.ProductMedia) error
 	UpdateProductMedia(productId int, removedMedia []int, addedMedia []model.ProductMedia) error
