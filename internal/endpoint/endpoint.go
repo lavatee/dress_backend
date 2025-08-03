@@ -1,8 +1,9 @@
 package endpoint
 
 import (
-	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/lavatee/dresscode_backend/internal/service"
 )
@@ -23,16 +24,16 @@ func NewEndpoint(services *service.Service) *Endpoint {
 
 func (e *Endpoint) InitRoutes() *gin.Engine {
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "X-Auth-Token, Content-Type, Origin, Authorization")
-		c.Writer.Header().Set("Access-Control-Allow-Creditionals", "true")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusOK)
-			return
-		}
-	})
+
+	config := cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+
+	router.Use(cors.New(config))
 	auth := router.Group("/auth")
 	{
 		auth.POST("/sign-up", e.SignUp)
@@ -50,22 +51,27 @@ func (e *Endpoint) InitRoutes() *gin.Engine {
 	}
 	products := api.Group("/products")
 	{
-		products.POST("/", e.PostProduct)
-		products.GET("/:id", e.GetProduct)
-		products.GET("/", e.GetProducts)
-		products.DELETE("/:id", e.DeleteProduct)
-		products.PUT("/:id/sizes", e.UpdateProductSizes)
-		products.GET("/:id/sizes", e.GetProductSizes)
-		products.POST("/:id/cart", e.AddProductToCart)
-		products.DELETE("/:id/cart", e.RemoveProductFromCart)
-		products.GET("/cart", e.GetProductsInCart)
-		products.POST("/:id/liked", e.AddProductToLiked)
-		products.DELETE("/:id/liked", e.RemoveProductFromLiked)
-		products.GET("/liked", e.GetLikedProducts)
-		products.PUT("/:id/sizes/amount", e.ChangeProductSizesAmount)
-		products.GET("/search", e.SearchProducts)
+		// Сначала идут статические маршруты
 		products.GET("/collections", e.GetCollections)
 		products.POST("/collections", e.CreateCollection)
+		products.GET("/cart", e.GetProductsInCart)
+		products.GET("/liked", e.GetLikedProducts)
+		products.GET("/search", e.SearchProducts)
+
+		// Затем маршруты с параметрами
+		products.POST("/:id/cart", e.AddProductToCart)
+		products.DELETE("/:id/cart", e.RemoveProductFromCart)
+		products.POST("/:id/liked", e.AddProductToLiked)
+		products.DELETE("/:id/liked", e.RemoveProductFromLiked)
+		products.PUT("/:id/sizes", e.UpdateProductSizes)
+		products.GET("/:id/sizes", e.GetProductSizes)
+		products.PUT("/:id/sizes/amount", e.ChangeProductSizesAmount)
+		products.GET("/:id", e.GetProduct)
+		products.DELETE("/:id", e.DeleteProduct)
+
+		// В конце общие маршруты
+		products.POST("/", e.PostProduct)
+		products.GET("/", e.GetProducts)
 	}
 	productsMedia := api.Group("/products-media")
 	{

@@ -81,12 +81,12 @@ func (r *ProductsPostgres) GetProducts(collectionId int, category string, colors
 	}
 
 	if len(colors) > 0 {
-		where += fmt.Sprintf("(", argIdx)
+		where += "("
 		for i, color := range colors {
-			where += "p.color = $%d"
-			if i < len(colors)-1 && i > 0 {
+			if i > 0 {
 				where += " OR "
 			}
+			where += fmt.Sprintf("p.color = $%d", argIdx)
 			args = append(args, color)
 			argIdx++
 		}
@@ -132,7 +132,10 @@ func (r *ProductsPostgres) GetProducts(collectionId int, category string, colors
 
 	offset := (page - 1) * pageLimit
 	query += fmt.Sprintf(" ORDER BY p.id LIMIT %d OFFSET %d", pageLimit, offset)
-	logrus.Infof("query: %s", query)
+	logrus.WithFields(logrus.Fields{
+		"query": query,
+		"args":  args,
+	}).Info("Executing products query")
 	var products []model.Product
 	if err := r.db.Select(&products, query, args...); err != nil {
 		return nil, fmt.Errorf("error getting products: %w", err)
@@ -194,7 +197,7 @@ func (r *ProductsPostgres) RemoveProductFromCart(userId int, productId int) erro
 }
 
 func (r *ProductsPostgres) GetProductsInCart(userId int) ([]model.ProductInCart, error) {
-	query := fmt.Sprintf("SELECT c.*, p.name as product_name, p.main_photo_url FROM %s c JOIN %s p ON c.product_id = p.id WHERE c.user_id = $1", productsInCartTable, productsTable)
+	query := fmt.Sprintf("SELECT c.*, p.name as product_name, p.main_photo_url, p.price FROM %s c JOIN %s p ON c.product_id = p.id WHERE c.user_id = $1", productsInCartTable, productsTable)
 	rows, err := r.db.Query(query, userId)
 	if err != nil {
 		return nil, err

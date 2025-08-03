@@ -118,12 +118,12 @@ func (s *AuthService) ParseToken(token string) (jwt.MapClaims, error) {
 		return []byte(tokenKey), nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.New("expired")
 	}
 	if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok && parsedToken.Valid {
 		return claims, nil
 	}
-	return nil, errors.New("invalid token")
+	return nil, errors.New("expired")
 }
 
 func (s *AuthService) NewAdmin(thisAdminId, newAdminId int) error {

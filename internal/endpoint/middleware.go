@@ -2,9 +2,11 @@ package endpoint
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func (e *Endpoint) Middleware(c *gin.Context) {
@@ -16,7 +18,12 @@ func (e *Endpoint) Middleware(c *gin.Context) {
 	}
 	claims, err := e.services.Auth.ParseToken(sliceOfHeaders[1])
 	if err != nil {
-		c.Set("user_id", float64(0))
+		logrus.Errorf("Middleware error: " + err.Error())
+		if err.Error() == "expired" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Need to refresh token"})
+		} else {
+			c.Set("user_id", float64(0))
+		}
 		return
 	}
 	c.Set("user_id", claims["id"])

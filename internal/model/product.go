@@ -47,6 +47,7 @@ type ProductInCart struct {
 	Amount       int     `json:"amount" db:"amount"`
 	Exists       bool    `json:"exists" db:"existence"`
 	MainPhotoURL *string `json:"main_photo_url" db:"main_photo_url"`
+	Price        int     `json:"price" db:"price"`
 }
 
 type Category struct {

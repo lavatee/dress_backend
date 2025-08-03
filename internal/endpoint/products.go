@@ -95,11 +95,10 @@ func (e *Endpoint) GetProducts(c *gin.Context) {
 	if err != nil {
 		page = 1
 	}
-	userId, err := e.GetUserId(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, ErrorResponse{Message: err.Error()})
-		return
-	}
+
+	// Пытаемся получить userId, но не возвращаем ошибку если токен отсутствует
+	userId, _ := e.GetUserId(c)
+
 	products, err := e.services.Products.GetProducts(collectionId, category, colors, sizes, minPrice, maxPrice, page, userId)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
